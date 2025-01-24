@@ -68,7 +68,7 @@ async def process_start_user(message: Message):
         message.from_user.last_name,
         datetime.datetime.now()
     )
-    # await message.answer_video_note('DQACAgIAAxkBAAICCmeOgtXtspSZ2nff7NBPKOadJYUYAALCXAACOT9QSEfiMEII4PH0NgQ')
+    await message.answer_video_note('DQACAgIAAxkBAANNZ5NHq3m_43okHTbTtkFT179fNP8AAsJcAAI5P1BIuBZ0ixX_H042BA')
     await asyncio.sleep(0.3)
     await message.answer(
         text="""
@@ -293,7 +293,7 @@ async def step_9(cb: CallbackQuery, state: FSMContext):
         update_user_debit(cb.from_user.id, 'Более 40 тыс. руб')
     await cb.message.answer('Проверяем Ваши ответы...')
     await asyncio.sleep(2)
-    #await cb.message.answer_video_note()
+    await cb.message.answer_video_note('DQACAgIAAxkBAANOZ5NHv2E4NrEv1d2Kuoc4nrgUdWwAAvhlAALe5IBI34k_1xHpoHk2BA')
     await cb.message.answer(text="""
 <b>Поздравляю🔥 Вы прошли тест!</b> 
   

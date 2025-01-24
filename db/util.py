@@ -97,7 +97,7 @@ def update_user_debit(id, debit):
 def update_user_phone(id, phone):
     with Session() as session:
         try:
-            stmt = update(User).where(User.id == id).values(phone=phone, time_debit=datetime.datetime.now())
+            stmt = update(User).where(User.id == id).values(phone=phone, time_phone=datetime.datetime.now())
             session.execute(stmt)
             session.commit()
         except Exception as e:
