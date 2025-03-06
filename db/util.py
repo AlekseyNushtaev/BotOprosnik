@@ -153,3 +153,4 @@ def get_all_users_unblock():
         for user in users.scalars():
             result.append(user.id)
     return result
+

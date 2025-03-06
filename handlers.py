@@ -42,6 +42,8 @@ class FSMFillForm(StatesGroup):
     video_add_button_text = State()
     video_add_button_url = State()
     check_video_note_1 = State()
+    send_id = State()
+    send_to_one = State()
 
 
 async def scheduler(time):
@@ -120,7 +122,8 @@ async def step_2_no(cb: CallbackQuery):
 @router.callback_query(F.data == 'step_2_2_no')
 async def step_2_2_no(cb: CallbackQuery):
     update_user_credit(cb.from_user.id, 'менее 300 тыс.')
-    await cb.message.answer(text="""
+    await cb.message.answer_video(video='BAACAgIAAxkBAAICNmfJOd9kSxzv3x_qs4YVklcR0TEzAAJ7cgAC2WxISt_6wsax1TUPNgQ',
+        caption="""
 Ваша сумма задолженности слишком мала для прохождения судебной процедуры банкротства.  
   
 Но в таком случае вы можете рассмотреть банкротство через МФЦ.    
@@ -234,25 +237,6 @@ async def step_6(cb: CallbackQuery):
                                                    ))
 
 
-@router.callback_query(F.data.in_({'step_6_1', 'step_6_2'}))
-async def step_7(cb: CallbackQuery):
-    if F.data == 'step_6_1':
-        update_user_sdelki(cb.from_user.id, 'Да, были сделки')
-    else:
-        update_user_sdelki(cb.from_user.id, 'Не было сделок')
-    await cb.message.answer(text="""
-Какой у Вас ежемесячный платеж по всем кредитам, кредитным картам, микрозаймам и иным долгам?
-    """,
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=create_kb(1,
-                                                   step_7_1="До 10 тыс. руб",
-                                                   step_7_2="от 10 до 20 тыс. руб",
-                                                   step_7_3="от 20 до 30 тыс. руб",
-                                                   step_7_4="от 30 до 50 тыс. руб",
-                                                   step_7_5="Более 50 тыс. руб"
-                                                   ))
-
-
 @router.callback_query(F.data.in_({'step_7_1', 'step_7_2', 'step_7_3', 'step_7_4', 'step_7_5'}))
 async def step_8(cb: CallbackQuery):
     if F.data == 'step_7_1':
@@ -325,10 +309,13 @@ async def get_phone_text(message: types.Message, state: FSMContext):
   
 Скоро я напишу вам на WhatsApp и договоримся об удобном для вас времени консультации🤝  
   
-Запишите, пожалуйста, мой номер, чтобы я мог с вами связаться 7777777777
+Запишите, пожалуйста, мой номер, чтобы я мог с вами связаться 88003332279
             """,
                          parse_mode=ParseMode.HTML)
+
     await state.set_state(default_state)
+    for admin_id in ADMIN_IDS:
+        await bot.forward_message(chat_id=admin_id, from_chat_id=message.chat.id, message_id=message.message_id)
 
 
 @router.message(F.contact, StateFilter(FSMFillForm.get_phone))
@@ -340,7 +327,7 @@ async def get_phone_contact(message: types.Message, state: FSMContext):
 
 Скоро я напишу вам на WhatsApp и договоримся об удобном для вас времени консультации🤝  
 
-Запишите, пожалуйста, мой номер, чтобы я мог с вами связаться 77777777777
+Запишите, пожалуйста, мой номер, чтобы я мог с вами связаться 88003332279
             """,
                          parse_mode=ParseMode.HTML)
     await state.set_state(default_state)
@@ -702,3 +689,59 @@ async def user_unblocked_bot(event: ChatMemberUpdated):
 @router.message(F.video_note, F.from_user.id.in_(ADMIN_IDS))
 async def get_note(message: types.Message):
     print(message.video_note.file_id)
+
+
+@router.message(F.video, F.from_user.id.in_(ADMIN_IDS))
+async def get_video(message: types.Message):
+    print(message.video.file_id)
+
+
+#Рассылка текста одному юзеру
+@router.message(F.text == 'Sendid', StateFilter(default_state), F.from_user.id.in_(ADMIN_IDS))
+async def send_to_one_1(message: types.Message, state: FSMContext):
+    await message.answer(text='Введите id юзера')
+    await state.set_state(FSMFillForm.send_id)
+
+
+@router.message(F.text, StateFilter(FSMFillForm.send_id), F.from_user.id.in_(ADMIN_IDS))
+async def send_to_one_2(message: types.Message, state: FSMContext):
+    try:
+        await state.update_data(user_id=int(message.text))
+        await message.answer(text='Введите сообщение для отправки юзеру по id')
+        await state.set_state(FSMFillForm.send_to_one)
+    except Exception:
+        await message.answer(text='Что-то пошло не так, проверьте корректность id. Попробуйте снова')
+        await state.set_state(default_state)
+
+
+@router.message(F.text, StateFilter(FSMFillForm.send_to_one), F.from_user.id.in_(ADMIN_IDS))
+async def send_to_one_3(message: types.Message, state: FSMContext):
+    try:
+        dct = await state.get_data()
+        await bot.send_message(chat_id=dct['user_id'], text=message.text)
+        await message.answer(text=f'Сообщение юзеру с id {dct['user_id']} отправлено')
+    except Exception:
+        await message.answer(text='Что-то пошло не так, проверьте корректность id или блокировку бота юзером. Попробуйте снова')
+    await state.set_state(default_state)
+    await state.clear()
+
+
+#Пересылка сообщений от клиента админам
+@router.message(F.text, ~F.from_user.id.in_(ADMIN_IDS))
+async def forward_message(message: types.Message):
+    for admin_id in ADMIN_IDS:
+        await bot.forward_message(chat_id=admin_id, from_chat_id=message.chat.id, message_id=message.message_id)
+        await bot.send_message(chat_id=admin_id, text=f'{message.from_user.username}(ID{message.from_user.id})')
+
+
+#Ответ на сообщения юзера админом через reply
+@router.message(F.text, F.from_user.id.in_(ADMIN_IDS))
+async def answer_admin_text(message: Message):
+    if message.reply_to_message:
+        try:
+            if '(ID' in message.reply_to_message.text:
+                user_id = int(message.reply_to_message.text[:-1].split('(ID')[-1])
+                await bot.send_message(chat_id=user_id, text=message.text)
+                await message.answer(text=f'Сообщение юзеру с id {user_id} отправлено')
+        except Exception:
+            await message.answer(text='Что-то пошло не так')
