@@ -137,6 +137,7 @@ def get_all_users():
             join = ''
             if user.time_start:
                 start = user.time_start.strftime('%Y-%m-%d   %H:%M:%S')
+            print(user.time_phone)
             if user.time_phone:
                 join = user.time_phone.strftime('%Y-%m-%d   %H:%M:%S')
             result.append([user.id, user.username, user.first_name, user.last_name,

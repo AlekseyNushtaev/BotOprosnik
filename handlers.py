@@ -55,7 +55,6 @@ async def scheduler(time):
             sheet.clear()
             user_list = get_all_users()
             sheet.append_rows(user_list)
-            print(datetime.datetime.now())
         except Exception as e:
             await bot.send_message(1012882762, str(e))
         await asyncio.sleep(time)
@@ -85,7 +84,7 @@ async def process_start_user(message: Message):
     )
 
 
-@router.callback_query(F.data == 'step_1')
+@router.callback_query(F.data == "step_1")
 async def step_1(cb: CallbackQuery):
     await cb.message.answer(text="""
 Отлично, начинаем онлайн-проверку на возможность списания долгов в вашем случае.  
@@ -109,7 +108,7 @@ async def step_1(cb: CallbackQuery):
                                                    ))
 
 
-@router.callback_query(F.data == 'step_2_no')
+@router.callback_query(F.data == "step_2_no")
 async def step_2_no(cb: CallbackQuery):
     await cb.message.answer(text="Правильно понимаю, что если суммировать все ваши долги, кредиты и займы с процентами, штрафами и пенями, то все равно будет <b>менее 300 тыс. рублей?</b>",
                             parse_mode=ParseMode.HTML,
@@ -124,13 +123,13 @@ async def step_2_2_no(cb: CallbackQuery):
     update_user_credit(cb.from_user.id, 'менее 300 тыс.')
     await cb.message.answer_video(video='BAACAgIAAxkBAAICNmfJOd9kSxzv3x_qs4YVklcR0TEzAAJ7cgAC2WxISt_6wsax1TUPNgQ',
         caption="""
-Ваша сумма задолженности слишком мала для прохождения судебной процедуры банкротства.  
-  
-Но в таком случае вы можете рассмотреть банкротство через МФЦ.    
+Ваша сумма задолженности слишком мала для прохождения судебной процедуры банкротства.
+
+Но в таком случае вы можете рассмотреть банкротство через МФЦ.
     """)
 
 
-@router.callback_query(F.data.in_({'step_2_1_yes', 'step_2_2_yes', 'step_2_3_yes', 'step_2_4_yes'}))
+@router.callback_query(F.data.in_({"step_2_1_yes", "step_2_2_yes", "step_2_3_yes", "step_2_4_yes"}))
 async def step_3(cb: CallbackQuery):
     if F.data == 'step_2_1_yes':
         update_user_credit(cb.from_user.id, '300-500 тыс.')
@@ -153,7 +152,7 @@ async def step_3(cb: CallbackQuery):
                             ))
 
 
-@router.callback_query(F.data.in_({'step_3_1', 'step_3_2', 'step_3_3'}))
+@router.callback_query(F.data.in_({"step_3_1", "step_3_2", "step_3_3"}))
 async def step_4(cb: CallbackQuery):
     if F.data == 'step_3_1':
         update_user_ipoteka(cb.from_user.id, 'Нет ипотеки')
@@ -174,7 +173,7 @@ async def step_4(cb: CallbackQuery):
                                                    ))
 
 
-@router.callback_query(F.data == 'step_4_many')
+@router.callback_query(F.data == "step_4_many")
 async def step_4_no(cb: CallbackQuery):
     await cb.message.answer(text="Правильно понимаю, что у Вас несколько объектов недвижимости?",
                             parse_mode=ParseMode.HTML,
@@ -184,7 +183,7 @@ async def step_4_no(cb: CallbackQuery):
                                                    ))
 
 
-@router.callback_query(F.data == 'step_4_4_no')
+@router.callback_query(F.data == "step_4_4_no")
 async def step_4_4_no(cb: CallbackQuery):
     update_user_house(cb.from_user.id, 'Несколько объектов недвижимости')
     await cb.message.answer(text="""
@@ -198,7 +197,7 @@ async def step_4_4_no(cb: CallbackQuery):
     """)
 
 
-@router.callback_query(F.data.in_({'step_4_1', 'step_4_2'}))
+@router.callback_query(F.data.in_({"step_4_1", "step_4_2"}))
 async def step_5(cb: CallbackQuery):
     if F.data == 'step_4_1':
         update_user_house(cb.from_user.id, 'Нет недвижимости')
@@ -217,7 +216,7 @@ async def step_5(cb: CallbackQuery):
                                                    ))
 
 
-@router.callback_query(F.data.in_({'step_5_1', 'step_5_2', 'step_5_3'}))
+@router.callback_query(F.data.in_({"step_5_1", "step_5_2", "step_5_3"}))
 async def step_6(cb: CallbackQuery):
     if F.data == 'step_5_1':
         update_user_auto(cb.from_user.id, 'Нет автомобиля')
@@ -237,7 +236,26 @@ async def step_6(cb: CallbackQuery):
                                                    ))
 
 
-@router.callback_query(F.data.in_({'step_7_1', 'step_7_2', 'step_7_3', 'step_7_4', 'step_7_5'}))
+@router.callback_query(F.data.in_({"step_6_1", "step_6_2"}))
+async def step_7(cb: CallbackQuery):
+    if F.data == 'step_6_1':
+        update_user_sdelki(cb.from_user.id, 'Да')
+    elif F.data == 'step_6_2':
+        update_user_sdelki(cb.from_user.id, 'Нет')
+    await cb.message.answer(text="""
+Какой у Вас ежемесячный платеж по всем кредитам, кредитным картам, микрозаймам и иным долгам?
+    """,
+                            parse_mode=ParseMode.HTML,
+                            reply_markup=create_kb(1,
+                                                   step_7_1="До 10 тыс. руб",
+                                                   step_7_2="от 10 до 20 тыс. руб",
+                                                   step_7_3="от 20 до 30 тыс. руб",
+                                                   step_7_4="от 30 до 50 тыс. руб",
+                                                   step_7_5="Более 50 тыс. руб",
+                                                   ))
+
+
+@router.callback_query(F.data.in_({"step_7_1", "step_7_2", "step_7_3", "step_7_4", "step_7_5"}))
 async def step_8(cb: CallbackQuery):
     if F.data == 'step_7_1':
         update_user_pay_credit(cb.from_user.id, 'До 10 тыс. руб')
