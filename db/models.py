@@ -39,6 +39,7 @@ class User(Base):
     time_debit: Mapped[datetime.datetime] = mapped_column(nullable=True)
     phone: Mapped[str] = mapped_column(nullable=True)
     time_phone: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    messages: Mapped[str] = mapped_column(default='')
     is_block: Mapped[bool] = mapped_column(default=False)
     time_block: Mapped[datetime.datetime] = mapped_column(nullable=True)
     time_unblock: Mapped[datetime.datetime] = mapped_column(nullable=True)

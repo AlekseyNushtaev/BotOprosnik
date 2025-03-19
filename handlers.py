@@ -13,7 +13,7 @@ from bot import bot
 from config import ADMIN_IDS
 from db.util import add_user_to_db, update_user_credit, update_user_ipoteka, update_user_house, update_user_auto, \
     update_user_sdelki, update_user_pay_credit, update_user_debit, update_user_blocked, update_user_unblocked, \
-    get_all_users_unblock, update_user_phone, get_all_users
+    get_all_users_unblock, update_user_phone, get_all_users, excel_to_db, update_messages
 from keyboard import create_kb, contact_keyboard, kb_button
 from spread import get_sheet
 
@@ -333,7 +333,11 @@ async def get_phone_text(message: types.Message, state: FSMContext):
 
     await state.set_state(default_state)
     for admin_id in ADMIN_IDS:
-        await bot.forward_message(chat_id=admin_id, from_chat_id=message.chat.id, message_id=message.message_id)
+        try:
+            await bot.forward_message(chat_id=admin_id, from_chat_id=message.chat.id, message_id=message.message_id)
+        except:
+            pass
+    update_messages(message.from_user.id, message.from_user.id, message.from_user.username, message.text)
 
 
 @router.message(F.contact, StateFilter(FSMFillForm.get_phone))
@@ -737,7 +741,8 @@ async def send_to_one_3(message: types.Message, state: FSMContext):
     try:
         dct = await state.get_data()
         await bot.send_message(chat_id=dct['user_id'], text=message.text)
-        await message.answer(text=f'Сообщение юзеру с id {dct['user_id']} отправлено')
+        await message.answer(text=f"Сообщение юзеру с id {dct['user_id']} отправлено")
+        update_messages(dct['user_id'], message.from_user.id, message.from_user.username, message.text)
     except Exception:
         await message.answer(text='Что-то пошло не так, проверьте корректность id или блокировку бота юзером. Попробуйте снова')
     await state.set_state(default_state)
@@ -748,11 +753,22 @@ async def send_to_one_3(message: types.Message, state: FSMContext):
 @router.message(F.text, ~F.from_user.id.in_(ADMIN_IDS))
 async def forward_message(message: types.Message):
     for admin_id in ADMIN_IDS:
-        await bot.forward_message(chat_id=admin_id, from_chat_id=message.chat.id, message_id=message.message_id)
-        await bot.send_message(chat_id=admin_id, text=f'{message.from_user.username}(ID{message.from_user.id})')
+        try:
+            await bot.forward_message(chat_id=admin_id, from_chat_id=message.chat.id, message_id=message.message_id)
+            await bot.send_message(chat_id=admin_id, text=f'{message.from_user.username}(ID{message.from_user.id})')
+        except:
+            pass
+    update_messages(message.from_user.id, message.from_user.id, message.from_user.username, message.text)
 
 
 #Ответ на сообщения юзера админом через reply
+
+
+@router.message(F.text == 'bd_19032025', F.from_user.id.in_(ADMIN_IDS))
+async def db(message: Message):
+    excel_to_db('bd_19032025.xlsx')
+
+
 @router.message(F.text, F.from_user.id.in_(ADMIN_IDS))
 async def answer_admin_text(message: Message):
     if message.reply_to_message:
@@ -761,5 +777,7 @@ async def answer_admin_text(message: Message):
                 user_id = int(message.reply_to_message.text[:-1].split('(ID')[-1])
                 await bot.send_message(chat_id=user_id, text=message.text)
                 await message.answer(text=f'Сообщение юзеру с id {user_id} отправлено')
+                update_messages(user_id, message.from_user.id, message.from_user.username, message.text)
         except Exception:
             await message.answer(text='Что-то пошло не так')
+
