@@ -1,4 +1,5 @@
 import datetime
+import re
 
 import openpyxl
 from sqlalchemy import select, insert, update
@@ -214,5 +215,20 @@ def update_messages(to_user_id, user_id, username, text):
             print(e)
 
 
+def update_messages_gaid(user_id, text):
+    with Session() as session:
+        try:
+            query = select(User).where(User.id == user_id)
+            old_msg = session.execute(query).scalars().first().messages
+            time_now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            new_msg = old_msg + f'({time_now}) - {text}\n'
+            stmt = update(User).where(User.id == user_id).values(messages=new_msg)
+            session.execute(stmt)
+            session.commit()
+        except Exception as e:
+            print(e)
 
 
+def valid_phone(phone_number: str) -> bool:
+    pattern = r'^(\+7|8)\d{10}$'
+    return bool(re.fullmatch(pattern, phone_number))

@@ -7,13 +7,14 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, StateFilter, ChatMemberUpdatedFilter, KICKED, MEMBER
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State, default_state
-from aiogram.types import Message, CallbackQuery, ChatMemberUpdated
+from aiogram.types import Message, CallbackQuery, ChatMemberUpdated, FSInputFile
 
 from bot import bot
 from config import ADMIN_IDS
 from db.util import add_user_to_db, update_user_credit, update_user_ipoteka, update_user_house, update_user_auto, \
     update_user_sdelki, update_user_pay_credit, update_user_debit, update_user_blocked, update_user_unblocked, \
-    get_all_users_unblock, update_user_phone, get_all_users, excel_to_db, update_messages
+    get_all_users_unblock, update_user_phone, get_all_users, excel_to_db, update_messages, valid_phone, \
+    update_messages_gaid
 from keyboard import create_kb, contact_keyboard, kb_button
 from spread import get_sheet
 
@@ -24,6 +25,7 @@ router =Router()
 
 
 class FSMFillForm(StatesGroup):
+    gaid = State()
     get_phone = State()
     send = State()
     text_add_button = State()
@@ -80,8 +82,42 @@ async def process_start_user(message: Message):
 Чтобы начать проверку, жмите на кнопку👇🏻
         """,
         parse_mode=ParseMode.HTML,
-        reply_markup=create_kb(1, step_1="✅Пройти проверку")
+        reply_markup=create_kb(1, step_1="✅Пройти проверку", gaid='Гайд "Как найти деньги на банкротство?"')
     )
+
+
+@router.callback_query(F.data == "gaid", StateFilter(default_state))
+async def gaid_1(cb: CallbackQuery, state: FSMContext):
+    await cb.message.answer(text="Для получения гайда введите корректный телефонный номер (в формате +7XXXXXXXXXX или 8XXXXXXXXXX)")
+    await state.set_state(FSMFillForm.gaid)
+
+@router.message(F.text, StateFilter(FSMFillForm.gaid))
+async def gaid_2(message: types.Message, state: FSMContext):
+    await state.set_state(default_state)
+    if valid_phone(message.text):
+        text = f'Юзер получил Гайд(телефон - {message.text})'
+        update_messages_gaid(message.from_user.id, text)
+        await message.answer_document(
+            document=FSInputFile('Где найти деньги на банкротство.pdf'),
+            caption="""
+📚 Ваш гайд «Как найти деньги на банкротство?» уже у вас!
+
+Теперь вы знаете, как получить деньги на процедуру списания долгов.
+
+⚡️ Хотите точно убедиться, подходит ли вам банкротство?
+Проверьте ситуацию всего за 1 минуту прямо сейчас! 👇🏼
+                """,
+            parse_mode=ParseMode.HTML,
+            reply_markup=create_kb(1, step_1="✅Пройти проверку")
+        )
+    else:
+        await message.answer(
+            text="Телефонный номер должен быть в формате +7XXXXXXXXXX или 8XXXXXXXXXX",
+            parse_mode=ParseMode.HTML,
+            reply_markup=create_kb(1, step_1="✅Пройти проверку",
+                                   gaid='Гайд "Как найти деньги на банкротство?"')
+        )
+
 
 
 @router.callback_query(F.data == "step_1")
